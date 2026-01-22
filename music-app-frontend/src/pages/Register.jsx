@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import Logo from '../components/Logo';
+import { useAuth } from './AuthContext';
 
 const Register = () => {
   const [formData, setFormData] = useState({
@@ -10,6 +11,8 @@ const Register = () => {
     password: ''
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -18,12 +21,28 @@ const Register = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setLoading(true);
+    setError('');
+
     try {
+      console.log("Registering user...");
       await api.post('/auth/register', formData);
-      navigate('/login');
+      
+      // Auto login after registration
+      console.log("Auto-logging in...");
+      const loginRes = await api.post('/auth/login', {
+        email: formData.email,
+        password: formData.password
+      });
+      
+      console.log("Setting user session...");
+      await login(loginRes.data.token);
+      navigate('/');
     } catch (err) {
+      console.error("Registration Error:", err);
       setError(err.response?.data?.message || 'Registration failed');
     }
+    setLoading(false);
   };
 
   return (
@@ -38,8 +57,8 @@ const Register = () => {
           <input type="text" name="username" placeholder="Username" value={formData.username} onChange={handleChange} className="p-3 bg-gray-800 rounded border border-gray-700 focus:outline-none focus:border-green-500" required />
           <input type="email" name="email" placeholder="Email" value={formData.email} onChange={handleChange} className="p-3 bg-gray-800 rounded border border-gray-700 focus:outline-none focus:border-green-500" required />
           <input type="password" name="password" placeholder="Password" value={formData.password} onChange={handleChange} className="p-3 bg-gray-800 rounded border border-gray-700 focus:outline-none focus:border-green-500" required />
-          <button type="submit" className="bg-green-500 text-black font-bold py-3 rounded hover:bg-green-400 transition">
-            Sign Up
+          <button type="submit" disabled={loading} className={`bg-green-500 text-black font-bold py-3 rounded hover:bg-green-400 transition ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
+            {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
         </form>
         <p className="mt-4 text-center text-gray-400 text-sm">

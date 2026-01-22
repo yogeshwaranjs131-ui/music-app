@@ -1,87 +1,41 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Player from '../components/Player';
-import { FaDownload, FaSearch, FaPlus, FaTimes, FaPlay } from 'react-icons/fa';
+import { FaDownload, FaSearch, FaPlus, FaTimes, FaPlay, FaComment, FaShareAlt, FaFacebook, FaTwitter, FaWhatsapp, FaHeart, FaInstagram, FaTrash } from 'react-icons/fa';
 import api from '../api';
+import { useAuth } from './AuthContext';
+import { usePlayer } from './PlayerContext';
+import CommentModal from '../components/CommentModal';
 
 const Home = () => {
   const [songs, setSongs] = useState([]);
-  const [currentSong, setCurrentSong] = useState(null);
-  const [isShuffle, setIsShuffle] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [user, setUser] = useState(null);
+  const { user, setUser, logout } = useAuth();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
   const [songToAdd, setSongToAdd] = useState(null);
+  const [activeCommentSong, setActiveCommentSong] = useState(null);
+  const [showShareModal, setShowShareModal] = useState(false);
+  const [songToShare, setSongToShare] = useState(null);
   const navigate = useNavigate();
+  const { playSong } = usePlayer();
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
-    const initialLoad = async () => {
-      const token = localStorage.getItem('token');
-      if (token) {
-        try {
-          // Fetch user, songs, and playlists in parallel
-          const [userResponse, songsResponse, playlistsResponse] = await Promise.all([
-            api.get('/auth/user'),
-            api.get('/songs'),
-            api.get('/playlists')
-          ]);
-          setUser(userResponse.data);
-          setSongs(songsResponse.data);
-          setUserPlaylists(playlistsResponse.data);
-        } catch (error) {
-          console.error('Failed to load initial data:', error);
-          localStorage.removeItem('token');
-          setUser(null); // Clear user state on error
-        }
-      } else {
-        const songsResponse = await api.get('/songs').catch(err => console.error("Failed to fetch songs:", err));
-        if (songsResponse) setSongs(songsResponse.data);
-      }
-    };
-    initialLoad();
-  }, []);
+    // Fetch all songs, regardless of login status
+    api.get('/songs')
+      .then(response => setSongs(response.data))
+      .catch(err => console.error("Failed to fetch songs:", err));
 
-  const handlePlaySong = (song) => {
-    console.log("Playing song:", song); 
-    setCurrentSong(song);
-  };
-
-  const toggleShuffle = () => {
-    setIsShuffle(!isShuffle);
-  };
-
-  const playNextSong = () => {
-    if (currentSong && songs.length > 0) {
-      // Use filtered list if searching, otherwise all songs
-      const playlist = searchTerm ? filteredSongs : songs;
-      if (isShuffle) {
-        let nextIndex = Math.floor(Math.random() * playlist.length);
-        // Prevent repeating the same song if possible
-        if (playlist.length > 1) {
-            const currentIndex = playlist.findIndex(song => song._id === currentSong._id);
-            while (nextIndex === currentIndex) {
-                nextIndex = Math.floor(Math.random() * playlist.length);
-            }
-        }
-        setCurrentSong(playlist[nextIndex]);
-      } else {
-        const currentIndex = playlist.findIndex(song => song._id === currentSong._id);
-        const nextIndex = (currentIndex + 1) % playlist.length; // Loop back to start
-        setCurrentSong(playlist[nextIndex]);
-      }
+    // If user is logged in (from AuthContext), fetch their playlists
+    if (user) {
+      api.get('/playlists')
+        .then(response => {
+          setUserPlaylists(response.data);
+        })
+        .catch(err => console.error("Failed to fetch user playlists:", err));
     }
-  };
-
-  const playPrevSong = () => {
-    if (currentSong && songs.length > 0) {
-      const currentIndex = songs.findIndex(song => song._id === currentSong._id);
-      const prevIndex = (currentIndex - 1 + songs.length) % songs.length; // Loop to end
-      setCurrentSong(songs[prevIndex]);
-    }
-  };
+  }, [user]); // This effect re-runs when the user logs in or out
 
   const handleDownload = (e, song) => {
     e.stopPropagation(); // இதை கிளிக் செய்யும்போது பாடல் ப்ளே ஆவதை தடுக்கும்
@@ -95,10 +49,30 @@ const Home = () => {
     document.body.removeChild(link);
   };
 
+  const handleLike = async (e, song) => {
+    e.stopPropagation();
+    if (!user) {
+        alert("Please login to like songs");
+        return;
+    }
+    try {
+      const response = await api.put(`/auth/favorites/${song._id}`);
+      setUser(response.data);
+    } catch (error) {
+      console.error("Failed to like song", error);
+    }
+  };
+
   const openPlaylistModal = (e, song) => {
     e.stopPropagation();
     setSongToAdd(song);
     setShowPlaylistModal(true);
+  };
+
+  const openShare = (e, song) => {
+    e.stopPropagation();
+    setSongToShare(song);
+    setShowShareModal(true);
   };
 
   const addToPlaylist = async (playlistId) => {
@@ -111,20 +85,33 @@ const Home = () => {
     }
   };
 
+  const handleDeleteSong = async (e, songId) => {
+    e.stopPropagation();
+    if (!window.confirm("Are you sure you want to delete this song?")) return;
+
+    try {
+      await api.delete(`/auth/songs/${songId}`);
+      setSongs(songs.filter(song => song._id !== songId));
+      alert("Song deleted successfully");
+    } catch (error) {
+      console.error("Failed to delete song", error);
+      alert("Failed to delete song");
+    }
+  };
+
   const filteredSongs = songs.filter((song) => {
     const term = searchTerm.toLowerCase();
     return (
-      song.title.toLowerCase().includes(term) ||
+      (song.title && song.title.toLowerCase().includes(term)) ||
       (song.artist && song.artist.toLowerCase().includes(term)) ||
       (song.singer && song.singer.toLowerCase().includes(term)) ||
       (song.movie && song.movie.toLowerCase().includes(term))
     );
   });
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    setUser(null);
-    navigate('/login');
+  const handlePlaySong = (song) => {
+    // Play the selected song and provide the current filtered list as the queue
+    playSong(song, filteredSongs);
   };
 
   const getGreeting = () => {
@@ -132,6 +119,13 @@ const Home = () => {
     if (hour < 12) return "Good Morning";
     if (hour < 18) return "Good Afternoon";
     return "Good Night";
+  };
+
+  const handleGreetingClick = (id) => {
+    if (id === 'liked') {
+      navigate('/collection/tracks');
+    }
+    // You can add more navigation for other cards here
   };
 
   const greetingPlaylists = [
@@ -144,11 +138,8 @@ const Home = () => {
   ];
 
   return (
-    <div className="h-screen bg-black flex flex-col">
-      <div className="flex flex-1 overflow-hidden pb-20"> {/* pb-20 for player space */}
-        <Sidebar playlists={userPlaylists} />
-        
-        <div className="flex-1 bg-linear-to-b from-gray-800 to-gray-900 overflow-y-auto rounded-lg m-2 ml-0 p-6 text-white">
+    <>
+      {/* The main layout is now handled by MainLayout.jsx, so we only need the page content here */}
             
             {/* Header */}
             <header className="flex justify-between items-center mb-8">
@@ -165,15 +156,19 @@ const Home = () => {
                 {user ? (
                   <div className="relative">
                     <div 
-                        className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center font-bold cursor-pointer"
+                        className="w-8 h-8 rounded-full flex items-center justify-center font-bold cursor-pointer bg-gray-700"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     >
-                      {user.username.charAt(0).toUpperCase()}
+                      {user.profileImage ? (
+                        <img src={user.profileImage.startsWith('http') ? user.profileImage : `${backendUrl}${user.profileImage}`} alt={user.username} className="w-full h-full rounded-full object-cover" />
+                      ) : (
+                        user.username.charAt(0).toUpperCase()
+                      )}
                     </div>
                     {isDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-10">
-                      <Link to="/profile" className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Profile</Link>
-                      <a onClick={handleLogout} className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Logout</a>
+                      <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Profile</Link>
+                      <a onClick={() => { logout(); navigate('/login'); }} className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Logout</a>
                     </div>
                     )}
                   </div>
@@ -189,7 +184,7 @@ const Home = () => {
                 <h2 className="text-3xl font-bold mb-4">{getGreeting()}</h2>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {greetingPlaylists.map((playlist) => (
-                        <div key={playlist.id} className="bg-white/10 hover:bg-white/20 transition-colors duration-300 rounded-md flex items-center gap-4 cursor-pointer overflow-hidden group">
+                        <div key={playlist.id} onClick={() => handleGreetingClick(playlist.id)} className="bg-white/10 hover:bg-white/20 transition-colors duration-300 rounded-md flex items-center gap-4 cursor-pointer overflow-hidden group">
                             <div className={`w-16 h-16 bg-linear-to-br ${playlist.color} shadow-lg`}></div>
                             <span className="font-bold text-sm">{playlist.name}</span>
                         </div>
@@ -205,7 +200,7 @@ const Home = () => {
                       filteredSongs.map((song) => (
                         <div key={song._id} className="bg-spotify-gray p-4 rounded-lg hover:bg-spotify-light-gray transition-all duration-300 group cursor-pointer" onClick={() => handlePlaySong(song)}>
                             <div className="relative w-full aspect-square mb-4">
-                                <img src={song.coverImage || 'https://via.placeholder.com/150'} alt={song.title} className="w-full h-full object-cover rounded-md shadow-lg" />
+                                <img src={song.coverImage ? (song.coverImage.startsWith('http') ? song.coverImage : `${backendUrl}${song.coverImage}`) : 'https://via.placeholder.com/150'} alt={song.title} className="w-full h-full object-cover rounded-md shadow-lg" />
                                 <button className="absolute bottom-2 right-2 w-12 h-12 bg-spotify-green rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 group-hover:bottom-4 transition-all duration-300">
                                     <FaPlay className="text-black text-xl ml-1" />
                                 </button>
@@ -214,10 +209,39 @@ const Home = () => {
                                 <h4 className="font-bold text-white truncate">{song.title}</h4>
                                 <p className="text-sm text-spotify-subtext line-clamp-2 mt-1">{song.singer || song.artist}</p>
                             </div>
+                            
+                            {/* Action Buttons Row */}
+                            <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
+                                <button onClick={(e) => handleLike(e, song)} className={`text-gray-400 hover:text-red-500 transition ${user?.likedSongs?.includes(song._id) ? 'text-red-500' : ''}`} title="Like">
+                                    <FaHeart />
+                                </button>
+                                <button onClick={(e) => handleDownload(e, song)} className="text-gray-400 hover:text-green-500 transition" title="Download">
+                                    <FaDownload />
+                                </button>
+                                <button onClick={(e) => { e.stopPropagation(); setActiveCommentSong(song); }} className="text-gray-400 hover:text-blue-400 transition" title="Comments">
+                                    <FaComment />
+                                </button>
+                                <button onClick={(e) => openPlaylistModal(e, song)} className="text-gray-400 hover:text-white transition" title="Add to Playlist">
+                                    <FaPlus />
+                                </button>
+                                <button onClick={(e) => openShare(e, song)} className="text-gray-400 hover:text-pink-500 transition" title="Share">
+                                    <FaShareAlt />
+                                </button>
+                                <button onClick={(e) => handleDeleteSong(e, song._id)} className="text-gray-400 hover:text-red-600 transition" title="Delete">
+                                    <FaTrash />
+                                </button>
+                            </div>
                         </div>
                     ))
                     ) : (
-                      <p className="text-gray-400 col-span-full">No songs found matching "{searchTerm}"</p>
+                      songs.length === 0 ? (
+                        <div className="col-span-full text-center py-10">
+                            <p className="text-gray-400 mb-4 text-lg">No songs available yet.</p>
+                            <Link to="/admin/upload" className="bg-green-500 text-black px-6 py-2 rounded-full font-bold hover:bg-green-400 transition">Upload Songs</Link>
+                        </div>
+                      ) : (
+                        <p className="text-gray-400 col-span-full">No songs found matching "{searchTerm}"</p>
+                      )
                     )}
                 </div>
             </section>
@@ -240,19 +264,36 @@ const Home = () => {
                 </div>
               </div>
             )}
-        </div>
-      </div>
-      <Player 
-        currentSong={currentSong} 
-        onNext={playNextSong} 
-        onPrev={playPrevSong} 
-        onSongEnd={playNextSong}
-        isShuffle={isShuffle}
-        toggleShuffle={toggleShuffle}
-        user={user}
-        setUser={setUser}
-      />
-    </div>
+
+            {/* Comment Modal */}
+            {activeCommentSong && (
+              <CommentModal song={activeCommentSong} user={user} onClose={() => setActiveCommentSong(null)} />
+            )}
+
+            {/* Share Modal */}
+            {showShareModal && songToShare && (
+              <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setShowShareModal(false)}>
+                <div className="bg-gray-900 p-6 rounded-lg w-80 text-center" onClick={e => e.stopPropagation()}>
+                  <h3 className="text-xl font-bold mb-4">Share "{songToShare.title}"</h3>
+                  <div className="flex justify-center gap-6 mb-6">
+                    <a href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:scale-110 transition">
+                      <FaFacebook size={32} />
+                    </a>
+                    <a href={`https://twitter.com/intent/tweet?text=Check out this song: ${songToShare.title}&url=${encodeURIComponent(window.location.href)}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:scale-110 transition">
+                      <FaTwitter size={32} />
+                    </a>
+                    <a href={`https://api.whatsapp.com/send?text=Check out ${songToShare.title} on MusicStream!`} target="_blank" rel="noopener noreferrer" className="text-green-500 hover:scale-110 transition">
+                      <FaWhatsapp size={32} />
+                    </a>
+                    <a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" className="text-pink-600 hover:scale-110 transition">
+                      <FaInstagram size={32} />
+                    </a>
+                  </div>
+                  <button onClick={() => setShowShareModal(false)} className="text-gray-400 hover:text-white text-sm">Close</button>
+                </div>
+              </div>
+            )}
+    </>
   );
 };
 

@@ -5,6 +5,7 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 const User = require('../models/User');
+const Song = require('../models/Song');
 
 const router = express.Router();
 
@@ -99,6 +100,9 @@ router.get('/user', authMiddleware, async (req, res) => {
   try {
     // req.user.id is available from the authMiddleware
     const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
     res.json(user);
   } catch (err) {
     console.error(err.message);
@@ -112,6 +116,8 @@ router.put('/favorites/:id', authMiddleware, async (req, res) => {
   try {
     const user = await User.findById(req.user.id);
     const songId = req.params.id;
+
+    if (!user.likedSongs) user.likedSongs = []; // Initialize if undefined
 
     if (user.likedSongs.includes(songId)) {
       user.likedSongs = user.likedSongs.filter(id => id !== songId); // Unlike
@@ -134,10 +140,74 @@ router.post('/upload-profile', authMiddleware, upload.single('profileImage'), as
         return res.status(400).json({ message: 'No file uploaded' });
     }
     const user = await User.findById(req.user.id);
-    user.profileImage = `http://localhost:5000/uploads/${req.file.filename}`;
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    user.profileImage = `/uploads/${req.file.filename}`;
     await user.save();
     const updatedUser = await User.findById(req.user.id).select('-password');
     res.json(updatedUser);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /api/auth/upload-gallery-photo
+router.post('/upload-gallery-photo', authMiddleware, upload.single('galleryPhoto'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: 'Please upload a file' });
+    }
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    // Store relative path
+    const photoUrl = `/uploads/${req.file.filename}`;
+    
+    if (!user.photoGallery) user.photoGallery = [];
+    user.photoGallery.push(photoUrl);
+    
+    await user.save();
+    const updatedUser = await User.findById(req.user.id).select('-password');
+    res.json(updatedUser);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE /api/auth/gallery-photo
+router.delete('/gallery-photo', authMiddleware, async (req, res) => {
+  try {
+    const { photoUrl } = req.body;
+    const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    // Remove photo from array
+    user.photoGallery = user.photoGallery.filter(p => p !== photoUrl);
+    
+    await user.save();
+    const updatedUser = await User.findById(req.user.id).select('-password');
+    res.json(updatedUser);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE /api/auth/songs/:id
+// @desc    Delete a song
+router.delete('/songs/:id', authMiddleware, async (req, res) => {
+  try {
+    const song = await Song.findById(req.params.id);
+    if (!song) return res.status(404).json({ message: 'Song not found' });
+
+    await Song.findByIdAndDelete(req.params.id);
+    res.json({ message: 'Song deleted successfully' });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

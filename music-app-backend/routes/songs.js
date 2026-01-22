@@ -45,10 +45,10 @@ router.post('/', upload.fields([{ name: 'audio', maxCount: 1 }, { name: 'coverIm
     let coverImage = '';
 
     if (req.files['audio']) {
-        audioUrl = `http://localhost:5000/uploads/${req.files['audio'][0].filename}`;
+        audioUrl = `/uploads/${req.files['audio'][0].filename}`;
     }
     if (req.files['coverImage']) {
-        coverImage = `http://localhost:5000/uploads/${req.files['coverImage'][0].filename}`;
+        coverImage = `/uploads/${req.files['coverImage'][0].filename}`;
     }
 
     const newSong = new Song({

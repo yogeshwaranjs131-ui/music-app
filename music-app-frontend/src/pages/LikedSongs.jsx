@@ -1,85 +1,48 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Player from '../components/Player';
 import api from '../api';
 import { FaPlay, FaHeart } from 'react-icons/fa';
+import { useAuth } from './AuthContext';
+import { usePlayer } from './PlayerContext';
 
 const LikedSongs = () => {
   const [songs, setSongs] = useState([]);
-  const [currentSong, setCurrentSong] = useState(null);
-  const [user, setUser] = useState(null);
-  const [isShuffle, setIsShuffle] = useState(false);
+  const { user, loading } = useAuth();
+  const { playSong } = usePlayer();
   const navigate = useNavigate();
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
+    // Redirect if not logged in
+    if (!loading && !user) {
+      navigate('/login');
+      return;
+    }
+
     const fetchData = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-
-      try {
-        const [userRes, songsRes] = await Promise.all([
-          api.get('/auth/user'),
-          api.get('/songs')
-        ]);
-        
-        const currentUser = userRes.data;
-        setUser(currentUser);
-
-        if (currentUser && currentUser.likedSongs && songsRes.data) {
-          const liked = songsRes.data.filter(song => currentUser.likedSongs.includes(song._id));
-          setSongs(liked);
-        }
-      } catch (error) {
-        console.error('Failed to fetch liked songs:', error);
-        if (error.response?.status === 401) {
-            localStorage.removeItem('token');
-            navigate('/login');
+      if (user) {
+        try {
+          // We only need to fetch all songs and then filter by the user's liked songs
+          const songsRes = await api.get('/songs');
+          if (user.likedSongs && songsRes.data) {
+            const liked = songsRes.data.filter(song => user.likedSongs.includes(song._id));
+            setSongs(liked);
+          }
+        } catch (error) {
+          console.error('Failed to fetch liked songs:', error);
         }
       }
     };
 
     fetchData();
-  }, [navigate, user?.likedSongs.length]); // Refetch when a song is liked/unliked
+  }, [user, loading, navigate]);
 
   const handlePlaySong = (song) => {
-    setCurrentSong(song);
-  };
-
-  const toggleShuffle = () => setIsShuffle(!isShuffle);
-
-  const playNextSong = () => {
-    if (songs.length === 0) return;
-    const currentIndex = songs.findIndex(song => song._id === currentSong?._id);
-    if (isShuffle) {
-        let nextIndex = Math.floor(Math.random() * songs.length);
-        if (songs.length > 1) {
-            while (nextIndex === currentIndex) {
-                nextIndex = Math.floor(Math.random() * songs.length);
-            }
-        }
-        setCurrentSong(songs[nextIndex]);
-    } else {
-        const nextIndex = (currentIndex + 1) % songs.length;
-        setCurrentSong(songs[nextIndex]);
-    }
-  };
-
-  const playPrevSong = () => {
-    if (songs.length === 0) return;
-    const currentIndex = songs.findIndex(song => song._id === currentSong?._id);
-    const prevIndex = (currentIndex - 1 + songs.length) % songs.length;
-    setCurrentSong(songs[prevIndex]);
+    playSong(song, songs);
   };
 
   return (
-    <div className="h-screen bg-black flex flex-col">
-      <div className="flex flex-1 overflow-hidden pb-20">
-        <Sidebar />
-        <div className="flex-1 bg-linear-to-b from-purple-800 via-gray-900 to-black overflow-y-auto rounded-lg m-2 ml-0 p-6 text-white">
+    <div className="bg-linear-to-b from-purple-800 via-gray-900 to-black">
           <header className="flex items-end gap-6 mb-8">
             <div className="w-32 h-32 md:w-48 md:h-48 bg-linear-to-br from-purple-600 to-indigo-400 flex items-center justify-center rounded shadow-lg">
               <FaHeart size={80} className="text-white"/>
@@ -97,7 +60,7 @@ const LikedSongs = () => {
                 <div className="text-gray-400 w-8 text-center">{index + 1}</div>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 bg-gray-700 rounded shrink-0">
-                    {song.coverImage && <img src={song.coverImage} alt={song.title} className="w-full h-full object-cover rounded" />}
+                    {song.coverImage && <img src={song.coverImage.startsWith('http') ? song.coverImage : `${backendUrl}${song.coverImage}`} alt={song.title} className="w-full h-full object-cover rounded" />}
                   </div>
                   <div>
                     <p className="font-semibold">{song.title}</p>
@@ -113,9 +76,6 @@ const LikedSongs = () => {
             ))}
             {songs.length === 0 && <p className="text-gray-400 mt-8 px-2">Songs you like will appear here.</p>}
           </section>
-        </div>
-      </div>
-      <Player currentSong={currentSong} onNext={playNextSong} onPrev={playPrevSong} onSongEnd={playNextSong} isShuffle={isShuffle} toggleShuffle={toggleShuffle} user={user} setUser={setUser} />
     </div>
   );
 };

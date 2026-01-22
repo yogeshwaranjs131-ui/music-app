@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Sidebar from '../components/Sidebar';
 import api from '../api';
 
 const AdminUpload = () => {
@@ -46,24 +45,24 @@ const AdminUpload = () => {
 
     setUploading(true);
     try {
-      await api.post('/songs', data);
+      const token = localStorage.getItem('token');
+      await api.post('/songs', data, {
+          headers: { 'x-auth-token': token }
+      });
       alert('Song uploaded successfully!');
       setFormData({ title: '', artist: '', singer: '', movie: '', album: '' });
       setAudioFile(null);
       setImageFile(null);
     } catch (error) {
       console.error("Upload failed", error);
-      alert("Failed to upload song.");
+      alert(error.response?.data?.message || "Failed to upload song.");
     } finally {
       setUploading(false);
     }
   };
 
   return (
-    <div className="h-screen bg-black flex flex-col">
-      <div className="flex flex-1 overflow-hidden pb-20">
-        <Sidebar />
-        <div className="flex-1 bg-linear-to-b from-gray-800 to-black overflow-y-auto rounded-lg m-2 ml-0 p-8 text-white">
+    <div className="p-8">
           <h1 className="text-3xl font-bold mb-6">Upload New Song</h1>
           <form onSubmit={handleSubmit} className="max-w-lg space-y-4 bg-gray-900 p-6 rounded-lg">
             <input type="text" name="title" placeholder="Song Title" value={formData.title} onChange={handleChange} className="w-full p-3 bg-gray-800 rounded border border-gray-700" required />
@@ -85,8 +84,6 @@ const AdminUpload = () => {
               {uploading ? 'Uploading...' : 'Upload Song'}
             </button>
           </form>
-        </div>
-      </div>
     </div>
   );
 };

@@ -3,17 +3,33 @@ import { FaHome, FaSearch, FaBook, FaPlus, FaHeart, FaSignOutAlt, FaCloudUploadA
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api';
 import Logo from './Logo';
+import { useAuth } from '../pages/AuthContext';
 
-const Sidebar = ({ playlists }) => {
+const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout } = useAuth();
+  const [playlists, setPlaylists] = useState([]);
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  useEffect(() => {
+    if (user) {
+      api.get('/playlists')
+        .then(response => {
+          setPlaylists(response.data);
+        })
+        .catch(err => console.error("Failed to fetch user playlists for sidebar:", err));
+    } else {
+      setPlaylists([]); // Clear playlists if user logs out
+    }
+  }, [user]);
 
   const handleCreatePlaylist = async () => {
     const playlistName = prompt("Enter new playlist name:");
     if (playlistName) {
       try {
         const response = await api.post('/playlists', { name: playlistName });
-        setPlaylists(prevPlaylists => [...prevPlaylists, response.data]);
+        setPlaylists(prevPlaylists => [...prevPlaylists, response.data]); // Add new playlist to state
       } catch (error) {
         console.error("Failed to create playlist", error);
         alert("Could not create playlist. Please try again.");
@@ -22,7 +38,7 @@ const Sidebar = ({ playlists }) => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     navigate('/login');
   };
 
@@ -31,38 +47,37 @@ const Sidebar = ({ playlists }) => {
       <Logo />
       <div className="bg-spotify-gray p-4 rounded-lg flex flex-col gap-4">
         <Link to="/" className={`flex items-center gap-4 transition-colors duration-200 ${location.pathname === '/' ? 'text-white' : 'text-spotify-subtext hover:text-white'}`}>
-            <FaHome size={24} />
-            <span className="font-bold">Home</span>
+          <FaHome size={24} />
+          <span className="font-bold">Home</span>
         </Link>
         <div className="flex items-center gap-4 cursor-pointer text-spotify-subtext hover:text-white transition-colors duration-200">
-            <FaSearch size={24} />
-            <span className="font-bold">Search</span>
+          <FaSearch size={24} />
+          <span className="font-bold">Search</span>
         </div>
         <Link to="/admin/upload" className={`flex items-center gap-4 transition-colors duration-200 ${location.pathname === '/admin/upload' ? 'text-white' : 'text-spotify-subtext hover:text-white'}`}>
-            <FaCloudUploadAlt size={24} />
-            <span className="font-bold">Upload</span>
+          <FaCloudUploadAlt size={24} />
+          <span className="font-bold">Upload</span>
         </Link>
-        <div className="flex items-center gap-4 cursor-pointer text-spotify-subtext hover:text-white transition-colors duration-200" onClick={handleLogout}>
+        <div onClick={handleLogout} className="flex items-center gap-4 cursor-pointer text-spotify-subtext hover:text-white transition-colors duration-200">
             <FaSignOutAlt size={24} />
             <span className="font-bold">Logout</span>
         </div>
       </div>
-      
       <div className="bg-spotify-gray flex-1 rounded-lg p-2 flex flex-col">
         <div className="flex justify-between items-center p-2">
-            <div className="flex items-center gap-2 hover:text-white cursor-pointer">
-                <FaBook size={24} />
-                <span className="font-bold">Your Library</span>
-            </div>
-            <FaPlus className="hover:text-white cursor-pointer" onClick={handleCreatePlaylist} title="Create playlist" />
+          <div className="flex items-center gap-2 hover:text-white cursor-pointer">
+            <FaBook size={24} />
+            <span className="font-bold">Your Library</span>
+          </div>
+          <FaPlus className="hover:text-white cursor-pointer" onClick={handleCreatePlaylist} title="Create playlist" />
         </div>
-        
+
         <div className="flex-1 overflow-y-auto mt-2 space-y-2 pr-2">
           {/* Liked Songs */}
           <Link to="/collection/tracks" className="block">
             <div className={`flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors duration-200 ${location.pathname === '/collection/tracks' ? 'bg-spotify-light-gray' : 'hover:bg-spotify-light-gray'}`}>
               <div className="w-12 h-12 bg-linear-to-br from-purple-600 to-indigo-400 flex items-center justify-center rounded">
-                <FaHeart size={20} className="text-white"/>
+                <FaHeart size={20} className="text-white" />
               </div>
               <div>
                 <p className="text-white font-semibold">Liked Songs</p>
@@ -87,6 +102,21 @@ const Sidebar = ({ playlists }) => {
           ))}
         </div>
       </div>
+
+      {user && (
+        <div className="bg-spotify-gray p-4 rounded-lg flex items-center gap-3">
+          <Link to="/profile" className="flex items-center gap-3 hover:opacity-80 transition-opacity overflow-hidden flex-1">
+            {user.profileImage ? (
+              <img src={user.profileImage.startsWith('http') ? user.profileImage : `${backendUrl}${user.profileImage}`} alt={user.username} className="w-10 h-10 rounded-full object-cover shrink-0" />
+            ) : (
+              <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold shrink-0">
+                {user.username.charAt(0).toUpperCase()}
+              </div>
+            )}
+            <span className="font-bold text-white truncate">{user.username}</span>
+          </Link>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,34 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/Sidebar';
-import Player from '../components/Player';
 import api from '../api';
+import { useAuth } from './AuthContext';
+import { FaTrash } from 'react-icons/fa';
 
 const Profile = () => {
-  const [user, setUser] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const { user, setUser, loading, logout } = useAuth();
+  const [profilePicUploading, setProfilePicUploading] = useState(false);
+  const [galleryUploading, setGalleryUploading] = useState(false);
   const navigate = useNavigate();
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
-    const fetchUser = async () => {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        navigate('/login');
-        return;
-      }
-      try {
-        const response = await api.get('/auth/user');
-        setUser(response.data);
-      } catch (error) {
-        console.error('Failed to fetch user', error);
-        navigate('/login');
-      }
-    };
-    fetchUser();
-  }, [navigate]);
+    // If the context is done loading and there's no user, redirect to login.
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token');
+    logout();
     navigate('/login');
   };
 
@@ -39,39 +30,80 @@ const Profile = () => {
     const formData = new FormData();
     formData.append('profileImage', file);
 
-    setUploading(true);
+    setProfilePicUploading(true);
     try {
-        const response = await api.post('/auth/upload-profile', formData);
+        const token = localStorage.getItem('token');
+        const response = await api.post('/auth/upload-profile', formData, {
+            headers: { 'x-auth-token': token }
+        });
         setUser(response.data);
     } catch (error) {
         console.error("Error uploading image", error);
-        alert("Failed to upload image");
+        alert(error.response?.data?.message || `Failed to upload image: ${error.response?.statusText || error.message}`);
     } finally {
-        setUploading(false);
+        setProfilePicUploading(false);
+        e.target.value = null; // Reset input so you can select the same file again if needed
+    }
+  };
+
+  const handleGalleryFileChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('galleryPhoto', file);
+
+    setGalleryUploading(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.post('/auth/upload-gallery-photo', formData, {
+          headers: { 'x-auth-token': token }
+      });
+      setUser(response.data);
+    } catch (error) {
+      console.error("Error uploading gallery photo", error);
+      alert(error.response?.data?.message || `Failed to upload photo to gallery: ${error.response?.statusText || error.message}`);
+    } finally {
+      setGalleryUploading(false);
+      e.target.value = null; // Reset input
+    }
+  };
+
+  const handleDeletePhoto = async (photoUrl) => {
+    if (!window.confirm("Are you sure you want to delete this photo?")) return;
+
+    try {
+      const token = localStorage.getItem('token');
+      const response = await api.delete('/auth/gallery-photo', {
+        headers: { 'x-auth-token': token },
+        data: { photoUrl }
+      });
+      setUser(response.data);
+    } catch (error) {
+      console.error("Failed to delete photo", error);
+      alert(error.response?.data?.message || "Failed to delete photo");
     }
   };
 
   return (
-    <div className="h-screen bg-black flex flex-col">
-      <div className="flex flex-1 overflow-hidden pb-20">
-        <Sidebar />
-        <div className="flex-1 bg-linear-to-b from-gray-800 to-black overflow-y-auto rounded-lg m-2 ml-0 p-8 text-white">
+    // The main layout is now handled by MainLayout.jsx, so we only need the page content here
+    <div className="p-8">
           <h1 className="text-4xl font-bold mb-6">Profile</h1>
           {user ? (
             <div className="bg-gray-900 p-6 rounded-lg max-w-md">
               <div className="flex items-center gap-4 mb-6">
                 <div className="relative w-20 h-20 group">
                   {user.profileImage ? (
-                    <img src={user.profileImage} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                    <img src={user.profileImage.startsWith('http') ? user.profileImage : `${backendUrl}${user.profileImage}`} alt="Profile" className="w-full h-full rounded-full object-cover" />
                   ) : (
                     <div className="w-full h-full bg-purple-600 rounded-full flex items-center justify-center text-3xl font-bold">
                       {user.username.charAt(0).toUpperCase()}
                     </div>
                   )}
                   <label htmlFor="profile-upload" className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 cursor-pointer transition-opacity">
-                    <span className="text-xs text-white">Edit</span>
+                    <span className="text-xs text-white">{profilePicUploading ? '...' : 'Edit'}</span>
                   </label>
-                  <input type="file" id="profile-upload" className="hidden" accept="image/*" onChange={handleFileChange} disabled={uploading} />
+                  <input type="file" id="profile-upload" className="hidden" accept="image/*" onChange={handleFileChange} disabled={profilePicUploading} />
                 </div>
                 <div>
                   <h2 className="text-2xl font-bold">{user.username}</h2>
@@ -94,6 +126,32 @@ const Profile = () => {
                 </div>
               </div>
 
+              {/* Photo Gallery Section */}
+              <div className="mt-8">
+                  <div className="flex justify-between items-center mb-4">
+                      <h3 className="text-xl font-bold">My Photos</h3>
+                      <label htmlFor="gallery-upload" className={`bg-green-500 text-black px-4 py-1 rounded-full text-sm font-bold cursor-pointer hover:bg-green-400 ${galleryUploading ? 'opacity-50' : ''}`}>
+                          {galleryUploading ? 'Adding...' : 'Add Photo'}
+                      </label>
+                      <input type="file" id="gallery-upload" className="hidden" accept="image/*" onChange={handleGalleryFileChange} disabled={galleryUploading} />
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-2">
+                      {user.photoGallery && user.photoGallery.length > 0 ? (
+                          user.photoGallery.map((photoUrl, index) => (
+                              <div key={index} className="relative aspect-square bg-gray-800 rounded group">
+                                  <img src={`${backendUrl}${photoUrl}`} alt={`Gallery photo ${index + 1}`} className="w-full h-full object-cover rounded" />
+                                  <button onClick={() => handleDeletePhoto(photoUrl)} className="absolute top-2 right-2 bg-red-600 text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-700">
+                                    <FaTrash size={12} />
+                                  </button>
+                              </div>
+                          ))
+                      ) : (
+                          <p className="text-gray-500 col-span-3 text-sm mt-2">Your photo gallery is empty.</p>
+                      )}
+                  </div>
+              </div>
+
               <button 
                 onClick={handleLogout}
                 className="mt-8 bg-red-600 text-white px-6 py-2 rounded-full font-bold hover:bg-red-700 transition w-full"
@@ -105,9 +163,6 @@ const Profile = () => {
             <p>Loading profile...</p>
           )}
         </div>
-      </div>
-      <Player /> 
-    </div>
   );
 };
 
