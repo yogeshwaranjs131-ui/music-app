@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaHome, FaSearch, FaBook, FaPlus, FaHeart, FaSignOutAlt, FaCloudUploadAlt } from 'react-icons/fa';
+import { FaHome, FaSearch, FaBook, FaPlus, FaHeart, FaCloudUploadAlt } from 'react-icons/fa';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import api from '../api';
 import Logo from './Logo';
@@ -8,7 +8,7 @@ import { useAuth } from '../pages/AuthContext';
 const Sidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [playlists, setPlaylists] = useState([]);
   const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
@@ -37,11 +37,6 @@ const Sidebar = () => {
     }
   };
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
-
   return (
     <div className="w-64 bg-black h-full flex-col text-gray-400 p-2 gap-2 hidden md:flex">
       <Logo />
@@ -58,10 +53,6 @@ const Sidebar = () => {
           <FaCloudUploadAlt size={24} />
           <span className="font-bold">Upload</span>
         </Link>
-        <div onClick={handleLogout} className="flex items-center gap-4 cursor-pointer text-spotify-subtext hover:text-white transition-colors duration-200">
-            <FaSignOutAlt size={24} />
-            <span className="font-bold">Logout</span>
-        </div>
       </div>
       <div className="bg-spotify-gray flex-1 rounded-lg p-2 flex flex-col">
         <div className="flex justify-between items-center p-2">

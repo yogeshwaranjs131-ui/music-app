@@ -40,7 +40,7 @@ const Login = () => {
       }
     } catch (err) {
       console.error("Login error:", err);
-      setError(err.response?.data?.message || 'Login failed. Check console for details.');
+      setError(err.response?.data?.message || err.message || 'Login failed. Check console for details.');
     } finally {
       setLoading(false);
     }

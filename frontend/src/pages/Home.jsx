@@ -170,7 +170,7 @@ const Home = () => {
                     {isDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-10">
                       <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Profile</Link>
-                      <a onClick={() => { logout(); navigate('/login'); }} className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Logout</a>
+                      <div onClick={() => { logout(); navigate('/login'); }} className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Logout</div>
                     </div>
                     )}
                   </div>
