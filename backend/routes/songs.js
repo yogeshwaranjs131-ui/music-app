@@ -3,6 +3,7 @@ const router = express.Router();
 const multer = require('multer');
 const Song = require('../models/Song');
 const auth = require('../middleware/auth');
+const Comment = require('../models/Comment');
 const cloudinary = require('cloudinary').v2;
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
 
@@ -59,6 +60,64 @@ router.post('/', auth, upload.fields([{ name: 'audio', maxCount: 1 }, { name: 'c
 
     const song = await newSong.save();
     res.json(song);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET /api/songs/:id/comments
+// @desc    Get comments for a song
+// @access  Public
+router.get('/:id/comments', async (req, res) => {
+  try {
+    const comments = await Comment.find({ song: req.params.id })
+      .populate('user', 'username profileImage')
+      .sort({ createdAt: -1 });
+    res.json(comments);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   POST /api/songs/:id/comments
+// @desc    Add a comment to a song
+// @access  Private
+router.post('/:id/comments', auth, async (req, res) => {
+  try {
+    const newComment = new Comment({
+      text: req.body.text,
+      user: req.user.id,
+      song: req.params.id
+    });
+    const comment = await newComment.save();
+    const populatedComment = await Comment.findById(comment._id).populate('user', 'username profileImage');
+    res.json(populatedComment);
+  } catch (err) {
+    console.error(err.message);
+    res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE /api/songs/comments/:commentId
+// @desc    Delete a comment
+// @access  Private
+router.delete('/comments/:commentId', auth, async (req, res) => {
+  try {
+    const comment = await Comment.findById(req.params.commentId);
+
+    if (!comment) {
+      return res.status(404).json({ message: 'Comment not found' });
+    }
+
+    // Check user
+    if (comment.user.toString() !== req.user.id) {
+      return res.status(401).json({ message: 'User not authorized' });
+    }
+
+    await Comment.findByIdAndDelete(req.params.commentId);
+    res.json({ message: 'Comment removed' });
   } catch (err) {
     console.error(err.message);
     res.status(500).send('Server Error');

@@ -10,6 +10,7 @@ const Home = () => {
   const [songs, setSongs] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const { user, setUser, logout } = useAuth();
+  const [recentlyPlayed, setRecentlyPlayed] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [userPlaylists, setUserPlaylists] = useState([]);
   const [showPlaylistModal, setShowPlaylistModal] = useState(false);
@@ -21,11 +22,37 @@ const Home = () => {
   const { playSong } = usePlayer();
   const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
+  // Helper function to format image URLs correctly
+  const getImageUrl = (path) => {
+    if (!path) return 'https://via.placeholder.com/150';
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.replace(/\\/g, '/');
+    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+  };
+
   useEffect(() => {
     // Fetch all songs, regardless of login status
     api.get('/songs')
-      .then(response => setSongs(response.data))
+      .then(response => {
+        if (Array.isArray(response.data)) {
+          setSongs(response.data);
+        }
+      })
       .catch(err => console.error("Failed to fetch songs:", err));
+
+    // Load Recently Played from Local Storage
+    const recent = localStorage.getItem('recentlyPlayed');
+    if (recent) {
+      try {
+        const parsed = JSON.parse(recent);
+        if (Array.isArray(parsed)) {
+          setRecentlyPlayed(parsed);
+        }
+      } catch (e) {
+        console.error("Failed to parse recently played:", e);
+        localStorage.removeItem('recentlyPlayed');
+      }
+    }
 
     // If user is logged in (from AuthContext), fetch their playlists
     if (user) {
@@ -99,7 +126,8 @@ const Home = () => {
     }
   };
 
-  const filteredSongs = songs.filter((song) => {
+  const filteredSongs = (Array.isArray(songs) ? songs : []).filter((song) => {
+    if (!song) return false;
     const term = searchTerm.toLowerCase();
     return (
       (song.title && song.title.toLowerCase().includes(term)) ||
@@ -124,8 +152,15 @@ const Home = () => {
   const handleGreetingClick = (id) => {
     if (id === 'liked') {
       navigate('/collection/tracks');
-    } else if (id === 'tamil') {
-      setSearchTerm('Tamil');
+    } else {
+      const terms = {
+        'tamil': 'Tamil',
+        'english': 'English',
+        'hindi': 'Hindi',
+        'party': 'Party',
+        'chill': 'Chill'
+      };
+      if (terms[id]) setSearchTerm(terms[id]);
     }
   };
 
@@ -194,6 +229,29 @@ const Home = () => {
                 </div>
             </section>
 
+            {/* Recently Played Section */}
+            {recentlyPlayed.length > 0 && !searchTerm && (
+              <section className="mb-8">
+                  <h3 className="text-xl font-bold mb-4">Recently Played</h3>
+                  <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-hide">
+                      {recentlyPlayed.map((song) => (
+                          song && <div key={song._id} className="min-w-40 w-40 bg-spotify-gray p-4 rounded-lg hover:bg-spotify-light-gray transition-all duration-300 group cursor-pointer shrink-0" onClick={() => handlePlaySong(song)}>
+                              <div className="relative w-full aspect-square mb-4">
+                                  <img src={getImageUrl(song.coverImage)} alt={song.title} className="w-full h-full object-cover rounded-md shadow-lg" />
+                                  <button className="absolute bottom-2 right-2 w-10 h-10 bg-spotify-green rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 group-hover:bottom-3 transition-all duration-300">
+                                      <FaPlay className="text-black text-sm ml-1" />
+                                  </button>
+                              </div>
+                              <div>
+                                  <h4 className="font-bold text-white truncate text-sm">{song.title}</h4>
+                                  <p className="text-xs text-spotify-subtext line-clamp-1 mt-1">{song.singer || song.artist}</p>
+                              </div>
+                          </div>
+                      ))}
+                  </div>
+              </section>
+            )}
+
             {/* Made For You Section */}
             <section>
                 <h3 className="text-xl font-bold mb-4">{searchTerm ? 'Search Results' : 'Featured Songs'}</h3>
@@ -202,7 +260,7 @@ const Home = () => {
                       filteredSongs.map((song) => (
                         <div key={song._id} className="bg-spotify-gray p-4 rounded-lg hover:bg-spotify-light-gray transition-all duration-300 group cursor-pointer" onClick={() => handlePlaySong(song)}>
                             <div className="relative w-full aspect-square mb-4">
-                                <img src={song.coverImage ? (song.coverImage.startsWith('http') ? song.coverImage : `${backendUrl}${song.coverImage}`) : 'https://via.placeholder.com/150'} alt={song.title} className="w-full h-full object-cover rounded-md shadow-lg" />
+                                <img src={getImageUrl(song.coverImage)} alt={song.title} className="w-full h-full object-cover rounded-md shadow-lg" />
                                 <button className="absolute bottom-2 right-2 w-12 h-12 bg-spotify-green rounded-full flex items-center justify-center shadow-xl opacity-0 group-hover:opacity-100 group-hover:bottom-4 transition-all duration-300">
                                     <FaPlay className="text-black text-xl ml-1" />
                                 </button>
