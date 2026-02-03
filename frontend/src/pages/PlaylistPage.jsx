@@ -1,0 +1,92 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import api from '../api';
+import { FaPlay, FaMusic } from 'react-icons/fa';
+import { useAuth } from './AuthContext';
+import { usePlayer } from './PlayerContext';
+
+const PlaylistPage = () => {
+  const [playlist, setPlaylist] = useState(null);
+  const { user, loading } = useAuth();
+  const { playSong } = usePlayer();
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+
+  // Helper function to format image URLs correctly
+  const getImageUrl = (path) => {
+    if (!path) return 'https://via.placeholder.com/150';
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.replace(/\\/g, '/');
+    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+  };
+
+  useEffect(() => {
+    if (!loading && !user) {
+      navigate('/login');
+    }
+  }, [user, loading, navigate]);
+
+  useEffect(() => {
+    if (id) {
+      const fetchPlaylist = async () => {
+        try {
+          const response = await api.get(`/playlists/${id}`);
+          setPlaylist(response.data);
+        } catch (error) {
+          console.error('Failed to fetch playlist:', error);
+          navigate('/'); // Redirect to home if playlist not found or not authorized
+        }
+      };
+      fetchPlaylist();
+    }
+  }, [id, navigate, user]); // re-fetch if user changes, for private playlists
+
+  const handlePlaySong = (song) => {
+    playSong(song, playlist.songs);
+  };
+
+  if (!playlist) {
+    return <div className="h-screen bg-black text-white flex items-center justify-center">Loading...</div>;
+  }
+
+  return (
+    <>
+          <header className="flex items-end gap-6 mb-8">
+            <div className="w-32 h-32 md:w-48 md:h-48 bg-gray-800 flex items-center justify-center rounded shadow-lg">
+              <FaMusic size={80} className="text-gray-500"/>
+            </div>
+            <div>
+              <p className="text-sm font-bold">Playlist</p>
+              <h1 className="text-5xl md:text-7xl font-extrabold">{playlist.name}</h1>
+              {playlist.owner && <p className="mt-4 text-sm text-gray-300">{playlist.owner.username} • {playlist.songs.length} songs</p>}
+            </div>
+          </header>
+
+          <section>
+            {playlist.songs.map((song, index) => (
+              <div key={song._id} className="grid grid-cols-[auto,1fr,auto] items-center gap-4 p-2 rounded-md hover:bg-white/10 group cursor-pointer" onDoubleClick={() => handlePlaySong(song)}>
+                <div className="text-gray-400 w-8 text-center">{index + 1}</div>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 bg-gray-700 rounded shrink-0">
+                    {song.coverImage && <img src={getImageUrl(song.coverImage)} alt={song.title} className="w-full h-full object-cover rounded" />}
+                  </div>
+                  <div>
+                    <p className="font-semibold">{song.title}</p>
+                    <p className="text-sm text-gray-400">{song.singer || song.artist}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <button onClick={() => handlePlaySong(song)} className="opacity-0 group-hover:opacity-100 transition-opacity text-white p-2">
+                    <FaPlay size={18} />
+                  </button>
+                </div>
+              </div>
+            ))}
+            {playlist.songs.length === 0 && <p className="text-gray-400 mt-8 px-2">This playlist is empty. Let's add some songs!</p>}
+          </section>
+    </>
+  );
+};
+
+export default PlaylistPage;

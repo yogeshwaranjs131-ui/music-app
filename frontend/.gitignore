@@ -1,0 +1,14 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment variables (Do not push these)
+.env
+.env.local
+.env.*.local
+
+# Misc
+.DS_Store
+*.log
