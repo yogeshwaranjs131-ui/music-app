@@ -4,9 +4,6 @@
 /frontend/node_modules
 
 # Environment variables
-.env
-backend/.env
-frontend/.env
 
 # Build output
 /dist
