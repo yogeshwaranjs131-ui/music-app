@@ -25,10 +25,10 @@ const Register = () => {
     setError('');
 
     try {
-      await api.post('/auth/register', formData);
+      await api.post('/api/auth/register', formData);
       
       // Auto login after registration
-      const loginRes = await api.post('/auth/login', {
+      const loginRes = await api.post('/api/auth/login', {
         email: formData.email,
         password: formData.password
       });

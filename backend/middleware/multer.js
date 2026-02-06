@@ -1,21 +1,28 @@
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../config/cloudinary');
+const path = require('path');
+const fs = require('fs');
 
-// Configure multer to use Cloudinary for storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: {
-    folder: 'music-app',
-    resource_type: 'auto',
-    public_id: (req, file) => {
-      // Sanitize filename and make it unique
-      const fileName = file.originalname.replace(/[^a-zA-Z0-9.]/g, '_');
-      return `${Date.now()}-${fileName}`;
-    },
+// Ensure uploads directory exists
+const uploadDir = 'uploads/';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir);
+}
+
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/');
   },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname));
+  }
 });
 
-const upload = multer({ storage: storage });
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/') || file.mimetype.startsWith('audio/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Not an image or audio file!'), false);
+  }
+};
 
-module.exports = upload;
+module.exports = multer({ storage: storage, fileFilter: fileFilter });

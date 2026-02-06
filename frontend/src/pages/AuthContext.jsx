@@ -14,7 +14,7 @@ export const AuthProvider = ({ children }) => {
         // Set the header for all subsequent requests
         api.defaults.headers.common['x-auth-token'] = token;
         try {
-          const response = await api.get('/auth/user');
+          const response = await api.get('/api/auth/user');
           setUser(response.data);
         } catch (error) {
           // If the token is invalid (401), just clear it.
@@ -64,7 +64,7 @@ export const AuthProvider = ({ children }) => {
     localStorage.setItem('token', token);
     api.defaults.headers.common['x-auth-token'] = token;
     try {
-      const response = await api.get('/auth/user');
+      const response = await api.get('/api/auth/user');
       setUser(response.data);
       return true; // Indicate success
     } catch (error) {

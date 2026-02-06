@@ -20,19 +20,18 @@ const Home = () => {
   const [songToShare, setSongToShare] = useState(null);
   const navigate = useNavigate();
   const { playSong } = usePlayer();
-  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   // Helper function to format image URLs correctly
   const getImageUrl = (path) => {
     if (!path) return 'https://via.placeholder.com/150';
     if (path.startsWith('http')) return path;
     const cleanPath = path.replace(/\\/g, '/');
-    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+    return `/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
   };
 
   useEffect(() => {
     // Fetch all songs, regardless of login status
-    api.get('/songs')
+    api.get('/api/songs')
       .then(response => {
         if (Array.isArray(response.data)) {
           setSongs(response.data);
@@ -56,7 +55,7 @@ const Home = () => {
 
     // If user is logged in (from AuthContext), fetch their playlists
     if (user) {
-      api.get('/playlists')
+      api.get('/api/playlists')
         .then(response => {
           setUserPlaylists(response.data);
         })
@@ -69,7 +68,7 @@ const Home = () => {
     if (!song.audioUrl) return;
 
     const link = document.createElement('a');
-    link.href = song.audioUrl.startsWith('http') ? song.audioUrl : `${backendUrl}${song.audioUrl}`;
+    link.href = getImageUrl(song.audioUrl);
     link.download = `${song.title} - ${song.artist || 'artist'}.mp3`; // The filename for the download
     document.body.appendChild(link);
     link.click();
@@ -83,7 +82,7 @@ const Home = () => {
         return;
     }
     try {
-      const response = await api.put(`/auth/favorites/${song._id}`);
+      const response = await api.put(`/api/auth/favorites/${song._id}`);
       setUser(response.data);
     } catch (error) {
       console.error("Failed to like song", error);
@@ -104,7 +103,7 @@ const Home = () => {
 
   const addToPlaylist = async (playlistId) => {
     try {
-      await api.put(`/playlists/${playlistId}/songs`, { songId: songToAdd._id });
+      await api.put(`/api/playlists/${playlistId}/songs`, { songId: songToAdd._id });
       setShowPlaylistModal(false);
       alert("Song added to playlist!");
     } catch (error) {
@@ -117,7 +116,7 @@ const Home = () => {
     if (!window.confirm("Are you sure you want to delete this song?")) return;
 
     try {
-      await api.delete(`/auth/songs/${songId}`);
+      await api.delete(`/api/songs/${songId}`);
       setSongs(songs.filter(song => song._id !== songId));
       alert("Song deleted successfully");
     } catch (error) {
@@ -197,7 +196,7 @@ const Home = () => {
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     >
                       {user.profileImage ? (
-                        <img src={user.profileImage.startsWith('http') ? user.profileImage : `${backendUrl}${user.profileImage}`} alt={user.username} className="w-full h-full rounded-full object-cover" />
+                        <img src={getImageUrl(user.profileImage)} alt={user.username} className="w-full h-full rounded-full object-cover" />
                       ) : (
                         user.username.charAt(0).toUpperCase()
                       )}

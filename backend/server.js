@@ -2,22 +2,34 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 const connectDB = require('./config/db');
+const path = require('path');
 
 // Import your actual route files. Make sure the paths are correct.
 const songRoutes = require('./routes/songs');
 const authRoutes = require('./routes/auth');
-const playlistsRoutes = require('./routes/playlists');
+const playlistsRoutes = require('./routes/playlistRoutes');
+const commentRoutes = require('./routes/comments');
 
 const app = express();
 
 // Middleware
-app.use(cors());
+const corsOptions = {
+  // Replace this with your deployed frontend URL on Netlify or Vercel
+  origin: process.env.NODE_ENV === 'production' ? 'https://your-music-app-frontend.netlify.app' : ['http://localhost:5173', 'http://localhost:5000'],
+  optionsSuccessStatus: 200
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 
+// Serve static files from the "uploads" directory
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+
 // API Routes - The paths here MUST match the paths used in your frontend api calls
-app.use('/songs', songRoutes);
-app.use('/auth', authRoutes);
-app.use('/playlists', playlistsRoutes);
+app.use('/api/songs', songRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/playlists', playlistsRoutes);
+app.use('/api/comments', commentRoutes);
 
 app.get('/', (req, res) => {
   res.send('Music App Backend is Running');

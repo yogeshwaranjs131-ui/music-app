@@ -9,14 +9,13 @@ const Profile = () => {
   const [profilePicUploading, setProfilePicUploading] = useState(false);
   const [galleryUploading, setGalleryUploading] = useState(false);
   const navigate = useNavigate();
-  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   // Helper function to format image URLs correctly
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
     const cleanPath = path.replace(/\\/g, '/');
-    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+    return `/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
   };
 
   useEffect(() => {
@@ -35,7 +34,7 @@ const Profile = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const endpoint = uploadType === 'profile' ? '/auth/upload-profile' : '/auth/upload-gallery-photo';
+    const endpoint = uploadType === 'profile' ? '/api/auth/upload-profile' : '/api/auth/upload-gallery-photo';
     const formKey = uploadType === 'profile' ? 'profileImage' : 'galleryPhoto';
     const setLoading = uploadType === 'profile' ? setProfilePicUploading : setGalleryUploading;
 
@@ -64,7 +63,7 @@ const Profile = () => {
 
     try {
       // The api instance already includes the auth token from AuthContext
-      const response = await api.delete('/auth/gallery-photo', {
+      const response = await api.delete('/api/auth/gallery-photo', {
         data: { photoUrl }
       });
       setUser(response.data);

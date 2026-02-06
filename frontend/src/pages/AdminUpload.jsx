@@ -59,7 +59,7 @@ const AdminUpload = () => {
             data.append('coverImage', imageFile);
         }
 
-        await api.post('/songs', data);
+        await api.post('/api/songs', data);
       }
 
       alert(audioFiles.length > 1 ? 'All songs uploaded successfully!' : 'Song uploaded successfully!');
