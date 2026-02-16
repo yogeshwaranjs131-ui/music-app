@@ -1,21 +1,26 @@
 const multer = require('multer');
-const { v2: cloudinary } = require('cloudinary');
 const { CloudinaryStorage } = require('multer-storage-cloudinary');
-
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET
-});
+const cloudinary = require('../config/cloudinary');
 
 // Cloudinary Storage
 const storage = new CloudinaryStorage({
   cloudinary: cloudinary,
-  params: async (req, file) => {
+  params: (req, file) => {
+    let folderName = 'music-app/others';
+    let resourceType = 'image';
+
+    if (file.fieldname === 'audio') {
+      folderName = 'music-app/songs';
+      resourceType = 'video'; // Cloudinary treats audio as video
+    } else if (file.fieldname === 'coverImage') {
+      folderName = 'music-app/images';
+      resourceType = 'image';
+    }
+
     return {
-      folder: 'music-app', // Cloudinary folder name
-      resource_type: 'auto', // Automatically detect image or audio
+      folder: folderName,
+      resource_type: resourceType,
+      public_id: file.originalname.split('.')[0] + '-' + Date.now(),
     };
   },
 });

@@ -15,14 +15,23 @@ const app = express();
 // Middleware
 const corsOptions = {
   // Replace this with your deployed frontend URL on Netlify or Vercel
-  origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_URL : true,
+  origin: (origin, callback) => {
+    const allowedOrigin = process.env.NODE_ENV === 'production' ? process.env.CLIENT_URL : true;
+    
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigin === true || allowedOrigin === origin) {
+      callback(null, true);
+    } else {
+      console.log(`Blocked by CORS: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));
 app.use(express.json());
-
-// Serve static files from the "uploads" directory
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 
 // API Routes - The paths here MUST match the paths used in your frontend api calls
