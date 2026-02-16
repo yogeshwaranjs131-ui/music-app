@@ -189,30 +189,6 @@ const Home = () => {
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
-                {user ? (
-                  <div className="relative">
-                    <div 
-                        className="w-8 h-8 rounded-full flex items-center justify-center font-bold cursor-pointer bg-gray-700"
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                    >
-                      {user.profileImage ? (
-                        <img src={getImageUrl(user.profileImage)} alt={user.username} className="w-full h-full rounded-full object-cover" />
-                      ) : (
-                        user.username.charAt(0).toUpperCase()
-                      )}
-                    </div>
-                    {isDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-gray-800 rounded-md shadow-lg py-1 z-10">
-                      <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Profile</Link>
-                      <div onClick={() => { logout(); navigate('/login'); }} className="block px-4 py-2 text-sm text-white hover:bg-gray-700 cursor-pointer">Logout</div>
-                    </div>
-                    )}
-                  </div>
-                ) : (
-                  <Link to="/login" className="bg-white text-black font-bold py-2 px-4 rounded-full hover:bg-gray-200 transition whitespace-nowrap">
-                    Log In
-                  </Link>
-                )}
             </header>
 
             {/* Greeting Grid */}

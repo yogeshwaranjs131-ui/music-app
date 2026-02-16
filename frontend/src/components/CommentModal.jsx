@@ -5,125 +5,146 @@ import api from '../api';
 const CommentModal = ({ song, user, onClose }) => {
   const [comments, setComments] = useState([]);
   const [newComment, setNewComment] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-
-  const getImageUrl = (path) => {
-    if (!path) return null;
-    if (path.startsWith('http')) return path;
-    const cleanPath = path.replace(/\\/g, '/');
-    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
-  };
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (song) {
-      const fetchComments = async () => {
-        setIsLoading(true);
-        try {
-          const response = await api.get(`/songs/${song._id}/comments`);
-          setComments(response.data);
-        } catch (error) {
-          console.error("Failed to fetch comments", error);
-        } finally {
-          setIsLoading(false);
-        }
-      };
+    if (song?._id) {
       fetchComments();
     }
   }, [song]);
 
-  const handleCommentSubmit = async (e) => {
+  const fetchComments = async () => {
+    try {
+      const res = await api.get(`/api/comments/${song._id}`);
+      setComments(res.data);
+    } catch (err) {
+      console.error("Failed to fetch comments", err);
+    }
+  };
+
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!newComment.trim()) return;
 
+    setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      const response = await api.post(`/songs/${song._id}/comments`, { text: newComment }, {
-        headers: { 'x-auth-token': token }
+      const res = await api.post('/api/comments', {
+        songId: song._id,
+        text: newComment
       });
-      setComments([response.data, ...comments]);
+      // Add new comment to top of list
+      setComments([res.data, ...comments]);
       setNewComment('');
-    } catch (error) {
-      console.error("Failed to post comment", error);
-      alert(error.response?.data?.message || error.message || "Could not post comment. Please make sure you are logged in.");
+    } catch (err) {
+      console.error("Failed to post comment", err);
+      alert("Failed to post comment");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleDeleteComment = async (commentId) => {
-    if (!window.confirm("Are you sure you want to delete this comment?")) return;
-
+  const handleDelete = async (commentId) => {
+    if (!window.confirm("Delete this comment?")) return;
     try {
-      const token = localStorage.getItem('token');
-      await api.delete(`/songs/comments/${commentId}`, {
-        headers: { 'x-auth-token': token }
-      });
+      await api.delete(`/api/comments/${commentId}`);
       setComments(comments.filter(c => c._id !== commentId));
-    } catch (error) {
-      console.error("Failed to delete comment", error);
-      alert(error.response?.data?.message || "Failed to delete comment");
+    } catch (err) {
+      console.error("Failed to delete comment", err);
     }
   };
 
-  if (!song) return null;
+  // Helper function to format image URLs correctly
+  const getImageUrl = (path) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const cleanPath = path.replace(/\\/g, '/');
+    return `/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+  };
 
   return (
     <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={onClose}>
-      <div className="bg-gray-900 text-white rounded-lg w-11/12 md:w-1/2 lg:w-1/3 max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
-        <header className="p-4 border-b border-gray-700 flex justify-between items-center">
-          <h2 className="text-xl font-bold">Comments for {song.title}</h2>
-          <FaTimes className="cursor-pointer" onClick={onClose} />
-        </header>
+      <div className="bg-gray-900 w-full max-w-md h-[80vh] rounded-lg flex flex-col shadow-2xl border border-gray-800" onClick={e => e.stopPropagation()}>
         
-        <div className="p-4 flex-1 overflow-y-auto">
-          {isLoading ? (
-            <p>Loading comments...</p>
-          ) : comments.length > 0 ? (
-            <div className="space-y-4">
-              {comments.map((comment) => (
-                <div key={comment._id} className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center font-bold shrink-0">
-                    {comment.user && comment.user.profileImage ? (
-                      <img src={getImageUrl(comment.user.profileImage)} alt={comment.user.username} className="w-full h-full object-cover rounded-full" />
-                    ) : (
-                      comment.user ? comment.user.username.charAt(0).toUpperCase() : '?'
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-sm">{comment.user ? comment.user.username : 'Unknown User'}</p>
-                    <p className="text-gray-300">{comment.text}</p>
-                    <p className="text-xs text-gray-500 mt-1">{new Date(comment.createdAt).toLocaleString()}</p>
+        {/* Header */}
+        <div className="p-4 border-b border-gray-800 flex justify-between items-center bg-gray-800/50 rounded-t-lg">
+          <div>
+            <h3 className="font-bold text-lg text-white">Comments</h3>
+            <p className="text-xs text-gray-400">for {song.title}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-white transition">
+            <FaTimes size={20} />
+          </button>
+        </div>
+
+        {/* Comments List */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 scrollbar-thin scrollbar-thumb-gray-700">
+          {comments.length === 0 ? (
+            <div className="flex flex-col items-center justify-center h-full text-gray-500">
+              <p>No comments yet.</p>
+              <p className="text-sm">Be the first to share your thoughts!</p>
+            </div>
+          ) : (
+            comments.map(comment => (
+              <div key={comment._id} className="flex gap-3 animate-fade-in">
+                <div className="w-8 h-8 rounded-full bg-gray-700 shrink-0 overflow-hidden border border-gray-600">
+                  {comment.user && comment.user.profileImage ? (
+                    <img src={getImageUrl(comment.user.profileImage)} alt="User" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-xs font-bold text-white bg-purple-600">
+                      {comment.user ? comment.user.username.charAt(0).toUpperCase() : '?'}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1">
+                  <div className="bg-gray-800 p-3 rounded-2xl rounded-tl-none border border-gray-700">
+                    <div className="flex justify-between items-start mb-1">
+                      <span className="font-bold text-sm text-gray-200">
+                        {comment.user ? comment.user.username : 'Unknown User'}
+                      </span>
+                      <span className="text-[10px] text-gray-500">
+                        {new Date(comment.createdAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-300 wrap-break-word">{comment.text}</p>
                   </div>
                   {user && comment.user && user._id === comment.user._id && (
-                    <button onClick={() => handleDeleteComment(comment._id)} className="text-gray-500 hover:text-red-500 transition p-1" title="Delete comment">
-                      <FaTrash size={12} />
+                    <button 
+                      onClick={() => handleDelete(comment._id)} 
+                      className="text-xs text-red-500 mt-1 hover:text-red-400 ml-2 flex items-center gap-1"
+                    >
+                      <FaTrash size={10} /> Delete
                     </button>
                   )}
                 </div>
-              ))}
-            </div>
-          ) : (
-            <p className="text-gray-400">No comments yet. Be the first to comment!</p>
+              </div>
+            ))
           )}
         </div>
 
-        <footer className="p-4 border-t border-gray-700">
-          {user ? (
-            <form onSubmit={handleCommentSubmit} className="flex gap-2">
-              <input
-                type="text"
-                value={newComment}
-                onChange={(e) => setNewComment(e.target.value)}
-                placeholder="Add a comment..."
-                className="flex-1 p-2 bg-gray-800 rounded border border-gray-700 focus:outline-none focus:border-green-500"
-              />
-              <button type="submit" className="bg-green-500 text-black font-bold px-4 rounded hover:bg-green-400 transition">
-                <FaPaperPlane />
-              </button>
-            </form>
-          ) : (
-            <p className="text-center text-gray-400">Please log in to comment.</p>
-          )}
-        </footer>
+        {/* Input Area */}
+        {user ? (
+          <form onSubmit={handleSubmit} className="p-4 border-t border-gray-800 bg-gray-800/30 flex gap-2 rounded-b-lg">
+            <input
+              type="text"
+              value={newComment}
+              onChange={(e) => setNewComment(e.target.value)}
+              placeholder="Write a comment..."
+              className="flex-1 bg-gray-700 text-white rounded-full px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 placeholder-gray-400"
+            />
+            <button 
+              type="submit" 
+              disabled={loading || !newComment.trim()}
+              className="bg-green-500 text-black w-10 h-10 rounded-full flex items-center justify-center hover:bg-green-400 disabled:opacity-50 disabled:cursor-not-allowed transition transform active:scale-95"
+            >
+              <FaPaperPlane size={14} />
+            </button>
+          </form>
+        ) : (
+          <div className="p-4 border-t border-gray-800 text-center bg-gray-800/30 rounded-b-lg">
+            <p className="text-sm text-gray-400">Please <span className="text-green-500 font-bold">login</span> to comment</p>
+          </div>
+        )}
+
       </div>
     </div>
   );

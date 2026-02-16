@@ -15,7 +15,7 @@ const app = express();
 // Middleware
 const corsOptions = {
   // Replace this with your deployed frontend URL on Netlify or Vercel
-  origin: process.env.NODE_ENV === 'production' ? 'https://your-music-app-frontend.netlify.app' : ['http://localhost:5173', 'http://localhost:5000'],
+  origin: process.env.NODE_ENV === 'production' ? process.env.CLIENT_URL : true,
   optionsSuccessStatus: 200
 };
 app.use(cors(corsOptions));

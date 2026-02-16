@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import Logo from '../components/Logo';
-import { useAuth } from './AuthContext';
+// import { useAuth } from './AuthContext'; // Not strictly needed if we force reload
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -11,11 +11,12 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useAuth();
+  // const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
+    if (error) setError(''); // Clear error when user starts typing
   };
 
   const handleSubmit = async (e) => {
@@ -26,15 +27,10 @@ const Login = () => {
     try {
       const response = await api.post('/api/auth/login', formData);
       if (response.data.token) {
-        try {
-          // Wait for the user details to be fetched
-          await login(response.data.token);
-          // Only navigate if login didn't throw an error
-          navigate('/');
-        } catch (profileErr) {
-          console.error("Profile fetch failed:", profileErr);
-          setError(profileErr.response?.data?.message || "Login successful, but failed to load user profile. Please try again.");
-        }
+        // Store token directly
+        localStorage.setItem('token', response.data.token);
+        // Force a full page reload to ensure AuthContext picks up the new token cleanly
+        window.location.href = '/';
       } else {
         setError('Login failed: No token received from server');
       }

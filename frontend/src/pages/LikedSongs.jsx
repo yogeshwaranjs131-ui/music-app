@@ -47,7 +47,7 @@ const LikedSongs = () => {
   };
 
   return (
-    <div className="bg-linear-to-b from-purple-800 via-gray-900 to-black">
+    <div className="bg-linear-to-b from-purple-800 via-gray-900 to-black p-8 min-h-screen">
           <header className="flex items-end gap-6 mb-8">
             <div className="w-32 h-32 md:w-48 md:h-48 bg-linear-to-br from-purple-600 to-indigo-400 flex items-center justify-center rounded shadow-lg">
               <FaHeart size={80} className="text-white"/>
