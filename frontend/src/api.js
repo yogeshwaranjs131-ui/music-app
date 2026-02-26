@@ -20,4 +20,12 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
+export const uploadSong = (formData) => {
+  return api.post('/api/songs', formData, {
+    headers: {
+      'Content-Type': 'multipart/form-data',
+    },
+  });
+};
+
 export default api;

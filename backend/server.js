@@ -33,6 +33,10 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.use(express.json());
 
+// Serve static files from the 'uploads' directory
+// This makes your song and image files accessible via URL
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
 
 // API Routes - The paths here MUST match the paths used in your frontend api calls
 app.use('/api/songs', songRoutes);
