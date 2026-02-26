@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
-import { FaHome, FaSearch, FaPlus, FaHeart, FaMusic, FaCloudUploadAlt } from 'react-icons/fa';
+import { FaHome, FaSearch, FaPlus, FaHeart, FaMusic, FaCloudUploadAlt, FaBars, FaTimes } from 'react-icons/fa';
 import api from '../api';
 import { useAuth } from '../pages/AuthContext'; // Make sure this path is correct
 import Logo from './Logo';
@@ -10,7 +10,7 @@ const MainLayout = () => {
   const [playlists, setPlaylists] = useState([]);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isAccountDropdownOpen, setIsAccountDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
 
   useEffect(() => {
@@ -23,7 +23,7 @@ const MainLayout = () => {
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
+        setIsAccountDropdownOpen(false);
       }
     };
     document.addEventListener('mousedown', handleClickOutside);
@@ -53,7 +53,7 @@ const MainLayout = () => {
 
   const handleLogout = () => {
     logout();
-    setIsDropdownOpen(false);
+    setIsAccountDropdownOpen(false);
     navigate('/'); // Navigate to home after logout
   };
 
@@ -66,10 +66,15 @@ const MainLayout = () => {
     return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
   };
 
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
   return (
     <div className="flex h-screen bg-black text-white">
       {/* Sidebar */}
-      <div className="w-75 bg-black hidden md:flex flex-col gap-2 p-2 h-full">
+      <div className={`w-72 bg-black flex-col gap-2 p-2 h-full transition-transform duration-300 z-40 md:flex ${isSidebarOpen ? 'fixed flex' : 'hidden'}`}>
+         <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-white self-end p-2">
+           <FaTimes size={24} />
+         </button>
          {/* Navigation */}
          <div className="bg-[#121212] rounded-lg p-5 flex flex-col gap-5">
             <div className="mb-2">
@@ -136,17 +141,20 @@ const MainLayout = () => {
       </div>
       
       {/* Main Content Area (Right Side) */}
-      <div className="flex-1 flex flex-col overflow-hidden rounded-lg bg-linear-to-b from-[#1f1f1f] to-[#121212] mr-2 my-2 relative">
+      <div className="flex-1 flex flex-col overflow-hidden md:rounded-lg bg-linear-to-b from-[#1f1f1f] to-[#121212] md:mr-2 md:my-2 relative">
         {/* Top Bar (Navigation Arrows & Auth) - Optional but good for UX */}
         <div className="h-16 bg-black/30 flex items-center justify-between px-6 sticky top-0 z-10 backdrop-blur-md">
            <div className="flex gap-2">
+              <button className="text-white md:hidden" onClick={() => setIsSidebarOpen(true)}>
+                <FaBars size={24} />
+              </button>
               {/* Add back/forward buttons here if needed */}
            </div>
            <div className="flex items-center gap-4">
               {user ? (
                  <div className="relative" ref={dropdownRef}>
                     <button 
-                      onClick={() => setIsDropdownOpen(!isDropdownOpen)} 
+                      onClick={() => setIsAccountDropdownOpen(!isAccountDropdownOpen)} 
                       className="w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center font-bold border border-black cursor-pointer hover:scale-105 transition overflow-hidden" 
                       title="Account"
                     >
@@ -156,9 +164,9 @@ const MainLayout = () => {
                         user.username.charAt(0).toUpperCase()
                       )}
                     </button>
-                    {isDropdownOpen && (
+                    {isAccountDropdownOpen && (
                       <div className="absolute right-0 mt-2 w-48 bg-[#282828] rounded-md shadow-lg z-20 py-1">
-                        <Link to="/profile" onClick={() => setIsDropdownOpen(false)} className="block px-4 py-2 text-sm text-[#b3b3b3] hover:bg-[#3e3e3e] rounded-t-md">Profile</Link>
+                        <Link to="/profile" onClick={() => setIsAccountDropdownOpen(false)} className="block px-4 py-2 text-sm text-[#b3b3b3] hover:bg-[#3e3e3e] rounded-t-md">Profile</Link>
                         <div className="border-t border-gray-700 my-1"></div>
                         <button onClick={handleLogout} className="block w-full text-left px-4 py-2 text-sm text-[#b3b3b3] hover:bg-[#3e3e3e] rounded-b-md">Log out</button>
                       </div>

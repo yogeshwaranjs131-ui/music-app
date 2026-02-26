@@ -32,7 +32,7 @@ const Player = () => {
   const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   useEffect(() => {
-    if (user && currentSong) {
+    if (user && currentSong && user.likedSongs) {
       setIsLiked(user.likedSongs.includes(currentSong._id));
     }
   }, [user, currentSong]);
@@ -61,15 +61,15 @@ const Player = () => {
   }, [togglePlayPause, playNext, playPrev]);
 
   const handleTimeUpdate = () => {
-    setProgress(audioRef.current.currentTime);
+    if (audioRef.current) setProgress(audioRef.current.currentTime);
   };
 
   const handleLoadedData = () => {
-    setDuration(audioRef.current.duration);
+    if (audioRef.current) setDuration(audioRef.current.duration);
   };
 
   const handleProgressChange = (e) => {
-    audioRef.current.currentTime = e.target.value;
+    if (audioRef.current) audioRef.current.currentTime = e.target.value;
     setProgress(e.target.value);
   };
   
@@ -212,14 +212,14 @@ const Player = () => {
           <h3 className="text-white font-bold mb-4 sticky top-0 bg-gray-900 py-2 border-b border-gray-800">Queue</h3>
           <div className="space-y-2">
             {queue.map((song, index) => (
-              <div key={index} onClick={() => playSong(song, queue)} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-gray-800 ${currentSong._id === song._id ? 'text-green-500' : 'text-gray-300'}`}>
+              song ? (<div key={index} onClick={() => playSong(song, queue)} className={`flex items-center gap-3 p-2 rounded cursor-pointer hover:bg-gray-800 ${currentSong._id === song._id ? 'text-green-500' : 'text-gray-300'}`}>
                 <span className="text-xs w-4">{index + 1}</span>
                 <div className="flex-1 min-w-0">
                   <p className="truncate text-sm font-medium">{song.title}</p>
                   <p className="truncate text-xs text-gray-500">{song.artist}</p>
                 </div>
                 {currentSong._id === song._id && <FaPlay size={10} />}
-              </div>
+              </div>) : null
             ))}
           </div>
         </div>
