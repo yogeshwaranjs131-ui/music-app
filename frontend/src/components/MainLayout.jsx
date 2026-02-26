@@ -4,6 +4,7 @@ import { FaHome, FaSearch, FaPlus, FaHeart, FaMusic, FaCloudUploadAlt } from 're
 import api from '../api';
 import { useAuth } from '../pages/AuthContext'; // Make sure this path is correct
 import Logo from './Logo';
+import Player from './Player';
 
 const MainLayout = () => {
   const [playlists, setPlaylists] = useState([]);
@@ -175,6 +176,7 @@ const MainLayout = () => {
           <Outlet />
         </div>
       </div>
+      <Player />
     </div>
   );
 };

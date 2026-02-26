@@ -149,6 +149,7 @@ const Player = () => {
       <audio
         ref={audioRef}
         src={getAudioUrl(currentSong.audioUrl)}
+        autoPlay
         loop={repeatMode === 'one'}
         onEnded={() => playNext(true)}
         onTimeUpdate={handleTimeUpdate}
