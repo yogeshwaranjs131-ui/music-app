@@ -1,7 +1,8 @@
 import axios from 'axios';
+import { API_URL } from './config';
 
 const api = axios.create({
-  baseURL: '', // Use relative path to leverage Vite proxy defined in vite.config.js
+  baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json'
   }
