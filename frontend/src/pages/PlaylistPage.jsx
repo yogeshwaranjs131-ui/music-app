@@ -11,13 +11,14 @@ const PlaylistPage = () => {
   const { playSong } = usePlayer();
   const { id } = useParams();
   const navigate = useNavigate();
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   // Helper function to format image URLs correctly
   const getImageUrl = (path) => {
     if (!path) return 'https://via.placeholder.com/150';
     if (path.startsWith('http')) return path;
     const cleanPath = path.replace(/\\/g, '/');
-    return `/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
   };
 
   useEffect(() => {

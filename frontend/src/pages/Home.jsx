@@ -20,13 +20,15 @@ const Home = () => {
   const [songToShare, setSongToShare] = useState(null);
   const navigate = useNavigate();
   const { playSong } = usePlayer();
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   // Helper function to format image URLs correctly
   const getImageUrl = (path) => {
     if (!path) return 'https://via.placeholder.com/150';
     if (path.startsWith('http')) return path;
     const cleanPath = path.replace(/\\/g, '/');
-    return `/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+    // Prepend backendUrl to the path
+    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
   };
 
   useEffect(() => {
@@ -68,7 +70,7 @@ const Home = () => {
     if (!song.audioUrl) return;
 
     const link = document.createElement('a');
-    link.href = getImageUrl(song.audioUrl);
+    link.href = song.audioUrl.startsWith('http') ? song.audioUrl : getImageUrl(song.audioUrl);
     link.download = `${song.title} - ${song.artist || 'artist'}.mp3`; // The filename for the download
     document.body.appendChild(link);
     link.click();

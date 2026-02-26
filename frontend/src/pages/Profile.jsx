@@ -7,12 +7,13 @@ const Profile = () => {
   const { user, setUser } = useAuth();
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState('');
+  const backendUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 
   const getImageUrl = (path) => {
     if (!path) return 'https://via.placeholder.com/150';
     if (path.startsWith('http')) return path;
     const cleanPath = path.replace(/\\/g, '/');
-    return `/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
   };
 
   const handleProfileImageUpload = async (e) => {
