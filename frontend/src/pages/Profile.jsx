@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
 import api from '../api';
-import { FaCamera } from 'react-icons/fa';
+import { FaCamera, FaPlus } from 'react-icons/fa';
 
 const Profile = () => {
   const { user, setUser } = useAuth();
@@ -12,8 +12,11 @@ const Profile = () => {
   const getImageUrl = (path) => {
     if (!path) return 'https://via.placeholder.com/150';
     if (path.startsWith('http')) return path;
-    const cleanPath = path.replace(/\\/g, '/');
-    return `${backendUrl}/${cleanPath.startsWith('/') ? cleanPath.slice(1) : cleanPath}`;
+    // Path-ல் உள்ள \ குறியீடுகளை / ஆக மாற்றுகிறோம்
+    let cleanPath = path.replace(/\\/g, '/');
+    if (cleanPath.startsWith('/')) cleanPath = cleanPath.slice(1);
+    
+    return `${backendUrl}/${cleanPath}`;
   };
 
   const handleProfileImageUpload = async (e) => {
@@ -28,16 +31,44 @@ const Profile = () => {
     setError('');
 
     try {
+      // Axios handles the Content-Type boundary automatically for FormData. 
+      // Don't set headers manually here.
       const response = await api.post('/api/auth/upload-profile', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+        // அப்லோட் ப்ராக்ரஸ்ஸை அறிய (விருப்பமிருந்தால்)
+        onUploadProgress: (progressEvent) => {
+          const percentCompleted = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          console.log(`Upload progress: ${percentCompleted}%`);
+        }
       });
+      
       // Update the user in the context with the new data from the server
       setUser(response.data);
+      alert("Profile image updated successfully!");
     } catch (err) {
       console.error("Profile upload failed:", err);
-      setError(err.response?.data?.message || 'Upload failed.');
+      setError(err.response?.data?.message || err.message || 'Upload failed.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleGalleryUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('galleryPhoto', file);
+
+    setUploading(true);
+    setError('');
+
+    try {
+      const response = await api.post('/api/auth/upload-gallery-photo', formData);
+      setUser(response.data);
+      alert("Photo added to gallery!");
+    } catch (err) {
+      console.error("Gallery upload failed:", err);
+      setError(err.response?.data?.message || err.message || 'Gallery upload failed.');
     } finally {
       setUploading(false);
     }
@@ -86,7 +117,17 @@ const Profile = () => {
               <img src={getImageUrl(photo)} alt={`Gallery photo ${index + 1}`} className="w-full h-full object-cover" />
             </div>
           ))}
-          {/* Add gallery upload button here if needed */}
+          <label className="aspect-square bg-gray-800 border-2 border-dashed border-gray-600 rounded-lg flex flex-col items-center justify-center cursor-pointer hover:bg-gray-700 hover:border-gray-400 transition-all">
+            <FaPlus size={24} className="mb-2" />
+            <span className="text-xs font-bold text-gray-400">Add Photo</span>
+            <input 
+              type="file" 
+              accept="image/*" 
+              className="hidden" 
+              onChange={handleGalleryUpload}
+              disabled={uploading}
+            />
+          </label>
         </div>
         {(!user.photoGallery || user.photoGallery.length === 0) && (
           <p className="text-gray-500">Your photo gallery is empty.</p>

@@ -21,7 +21,7 @@ const Sidebar = ({ isOpen, onClose }) => {
 
   useEffect(() => {
     if (user) {
-      api.get('/playlists')
+      api.get('/api/playlists')
         .then(response => {
           setPlaylists(response.data);
         })
@@ -35,7 +35,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     const playlistName = prompt("Enter new playlist name:");
     if (playlistName) {
       try {
-        const response = await api.post('/playlists', { name: playlistName });
+        const response = await api.post('/api/playlists', { name: playlistName });
         setPlaylists(prevPlaylists => [...prevPlaylists, response.data]); // Add new playlist to state
       } catch (error) {
         console.error("Failed to create playlist", error);

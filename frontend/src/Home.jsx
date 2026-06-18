@@ -70,7 +70,7 @@ const Home = () => {
         return;
     }
     try {
-      const response = await api.put(`/auth/favorites/${song._id}`);
+      const response = await api.put(`/api/auth/favorites/${song._id}`);
       setUser(response.data);
     } catch (error) {
       console.error("Failed to like song", error);
@@ -104,7 +104,7 @@ const Home = () => {
     if (!window.confirm("Are you sure you want to delete this song?")) return;
 
     try {
-      await api.delete(`/auth/songs/${songId}`);
+      await api.delete(`/api/songs/${songId}`); 
       setSongs(songs.filter(song => song._id !== songId));
       alert("Song deleted successfully");
     } catch (error) {
@@ -216,7 +216,7 @@ const Home = () => {
                             {/* Action Buttons Row */}
                             <div className="flex justify-between items-center mt-3 pt-3 border-t border-gray-700">
                                 <button onClick={(e) => handleLike(e, song)} className={`text-gray-400 hover:text-red-500 transition ${user?.likedSongs?.includes(song._id) ? 'text-red-500' : ''}`} title="Like">
-                                    <FaHeart />
+                                    <FaHeart className={user?.likedSongs?.some(id => (id._id || id) === song._id) ? 'text-red-500' : ''} />
                                 </button>
                                 <button onClick={(e) => handleDownload(e, song)} className="text-gray-400 hover:text-green-500 transition" title="Download">
                                     <FaDownload />

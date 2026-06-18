@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../api';
 import Logo from '../components/Logo';
-// import { useAuth } from './AuthContext'; // Not strictly needed if we force reload
+import { useAuth } from './AuthContext';
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -11,7 +11,7 @@ const Login = () => {
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  // const { login } = useAuth();
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -25,12 +25,10 @@ const Login = () => {
     setError('');
 
     try {
-      const response = await api.post('/api/auth/login', formData);
-      if (response.data.token) {
-        // Store token directly
-        localStorage.setItem('token', response.data.token);
-        // Force a full page reload to ensure AuthContext picks up the new token cleanly
-        window.location.href = '/';
+      const success = await login(formData.email, formData.password);
+      if (success) {
+        console.log("Login Accepted!"); // Frontend confirmation
+        navigate('/');
       } else {
         setError('Login failed: No token received from server');
       }

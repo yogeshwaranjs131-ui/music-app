@@ -27,13 +27,9 @@ const Register = () => {
     try {
       await api.post('/api/auth/register', formData);
       
-      // Auto login after registration
-      const loginRes = await api.post('/api/auth/login', {
-        email: formData.email,
-        password: formData.password
-      });
-      
-      await login(loginRes.data.token);
+      // AuthContext-ல் உள்ள login பங்க்ஷனை நேரடியாகப் பயன்படுத்துகிறோம்
+      await login(formData.email, formData.password);
+      console.log("Registration Accepted!"); // Frontend confirmation
       navigate('/');
     } catch (err) {
       console.error("Registration Error:", err);

@@ -113,7 +113,7 @@ const Player = () => {
   const handleLike = async () => {
     if (!user || !currentSong) return;
     try {
-      const response = await api.put(`/auth/favorites/${currentSong._id}`);
+      const response = await api.put(`/api/auth/favorites/${currentSong._id}`);
       setUser(response.data); // Update user in context
       setIsLiked(!isLiked);
     } catch (error) {

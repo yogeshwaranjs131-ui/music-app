@@ -1,28 +1,17 @@
 const multer = require('multer');
-const { CloudinaryStorage } = require('multer-storage-cloudinary');
-const cloudinary = require('../config/cloudinary');
+const path = require('path');
 
-// Cloudinary Storage
-const storage = new CloudinaryStorage({
-  cloudinary: cloudinary,
-  params: (req, file) => {
-    let folderName = 'music-app/others';
-    let resourceType = 'image';
-
-    if (file.fieldname === 'audio') {
-      folderName = 'music-app/songs';
-      resourceType = 'video'; // Cloudinary treats audio as video
-    } else if (file.fieldname === 'coverImage') {
-      folderName = 'music-app/images';
-      resourceType = 'image';
-    }
-
-    return {
-      folder: folderName,
-      resource_type: resourceType,
-      public_id: file.originalname.split('.')[0] + '-' + Date.now(),
-    };
+// Local Storage configuration
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    // Middleware folder-ல் இருந்து ஒரு படி மேலே சென்று uploads folder-ஐக் குறிக்கிறோம்
+    const uploadPath = path.join(__dirname, '..', 'uploads');
+    cb(null, uploadPath); 
   },
+  filename: function (req, file, cb) {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+  }
 });
 
 const fileFilter = (req, file, cb) => {

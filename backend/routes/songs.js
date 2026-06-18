@@ -7,20 +7,22 @@ const auth = require('../middleware/auth');
 // Upload a song (Audio + Image)
 router.post('/', auth, upload.fields([{ name: 'audio', maxCount: 1 }, { name: 'coverImage', maxCount: 1 }]), async (req, res) => {
   try {
-    const { title, artist, album } = req.body;
+    const { title, artist, album, singer, movie } = req.body;
     const audioFile = req.files.audio ? req.files.audio[0] : null;
     const imageFile = req.files.coverImage ? req.files.coverImage[0] : null;
 
-    if (!audioFile || !imageFile) {
-      return res.status(400).json({ message: 'Audio and Image files are required' });
+    if (!audioFile) {
+      return res.status(400).json({ message: 'Audio file is required' });
     }
 
     const newSong = new Song({
       title,
       artist,
       album,
-      songUrl: audioFile.path, // Cloudinary URL
-      imageUrl: imageFile.path, // Cloudinary URL
+      singer,
+      movie,
+      songUrl: `uploads/${audioFile.filename}`,
+      imageUrl: imageFile ? `uploads/${imageFile.filename}` : 'uploads/default-cover.png',
     });
 
     await newSong.save();

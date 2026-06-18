@@ -1,26 +1,28 @@
 const express = require('express');
 const router = express.Router();
-const { 
-    register, 
-    login, 
-    getUser, 
-    toggleFavorite, 
-    uploadProfile, 
-    uploadGallery, 
-    deleteGallery 
-} = require('../controllers/authController');
-const auth = require('../middleware/auth');
-// Use the same multer middleware configured for songs
-const upload = require('../middleware/multer');
+const authController = require('../controllers/authController');
+const authMiddleware = require('../middleware/auth'); // Assuming you have JWT middleware
+const upload = require('../middleware/multer'); // Import the multer instance
 
-router.post('/register', register);
-router.post('/login', login);
-router.get('/user', auth, getUser);
+// Register User
+router.post('/register', authController.register);
 
-// These routes were missing, causing 404 errors from Home and Profile pages.
-router.put('/favorites/:id', auth, toggleFavorite);
-router.post('/upload-profile', auth, upload.fields([{ name: 'profileImage', maxCount: 1 }]), uploadProfile);
-router.post('/upload-gallery-photo', auth, upload.fields([{ name: 'galleryPhoto', maxCount: 1 }]), uploadGallery);
-router.delete('/gallery-photo', auth, deleteGallery);
+// Login User
+router.post('/login', authController.login);
+
+// Get User Data (Protected)
+router.get('/user', authMiddleware, authController.getUser);
+
+// Upload Profile Image (Protected)
+router.post('/upload-profile', authMiddleware, upload.single('profileImage'), authController.uploadProfile);
+
+// Upload Gallery Photo (Protected)
+router.post('/upload-gallery-photo', authMiddleware, upload.single('galleryPhoto'), authController.uploadGallery);
+
+// Toggle Favorite Song (Protected)
+router.put('/favorites/:id', authMiddleware, authController.toggleFavorite);
+
+// Delete Photo from Gallery (Protected)
+router.delete('/delete-gallery', authMiddleware, authController.deleteGallery);
 
 module.exports = router;

@@ -3,9 +3,6 @@ import { API_URL } from './config';
 
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  }
 });
 
 // Add a request interceptor to attach the token

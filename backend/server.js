@@ -1,55 +1,85 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
-require('dotenv').config();
-const connectDB = require('./config/db');
 const path = require('path');
+require('dotenv').config();
+const User = require('./models/User');
+const bcrypt = require('bcryptjs');
+const fs = require('fs');
 
-// Import your actual route files. Make sure the paths are correct.
-const songRoutes = require('./routes/songs');
 const authRoutes = require('./routes/auth');
-const playlistsRoutes = require('./routes/playlistRoutes');
-const commentRoutes = require('./routes/comments');
+const playlistRoutes = require('./routes/playlists');
+const songRoutes = require('./routes/songs');
 
 const app = express();
-
-// Middleware
-const corsOptions = {
-  // Replace this with your deployed frontend URL on Netlify or Vercel
-  origin: (origin, callback) => {
-    const allowedOrigin = process.env.NODE_ENV === 'production' ? process.env.CLIENT_URL : true;
-    
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigin === true || allowedOrigin === origin) {
-      callback(null, true);
-    } else {
-      console.log(`Blocked by CORS: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
-  optionsSuccessStatus: 200
-};
-app.use(cors(corsOptions));
-app.use(express.json());
-
-// Serve static files from the 'uploads' directory
-// This makes your song and image files accessible via URL
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-
-// API Routes - The paths here MUST match the paths used in your frontend api calls
-app.use('/api/songs', songRoutes);
-app.use('/api/auth', authRoutes);
-app.use('/api/playlists', playlistsRoutes);
-app.use('/api/comments', commentRoutes);
-
-app.get('/', (req, res) => {
-  res.send('Music App Backend is Running');
-});
-
 const PORT = process.env.PORT || 5000;
 
-connectDB().then(() => {
-  app.listen(PORT, () => console.log(`Server running on port: ${PORT}`));
+// Ensure uploads directory exists
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Serve static files from the uploads directory
+app.use('/uploads', express.static(uploadDir));
+
+// Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/playlists', playlistRoutes);
+app.use('/api/songs', songRoutes);
+
+// Global Error Handler
+app.use((err, req, res, next) => {
+  console.error(err.stack);
+  res.status(500).json({ message: err.message || 'Internal Server Error' });
 });
+
+// Basic Health Check
+app.get('/', (req, res) => {
+  res.send('Music Streaming API is running...');
+});
+
+// Database Connection
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/music-app')
+  .then(() => {
+    console.log('Connected to MongoDB');
+    // Server தொடங்கும் போது குறிப்பிட்ட User-ஐ உருவாக்குகிறது அல்லது புதுப்பிக்கிறது
+    seedMainUser();
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  })
+  .catch(err => {
+    console.error('Database connection error:', err);
+  });
+
+async function seedMainUser() {
+  try {
+    const email = 'yogeshwaranjs131@gmail.com';
+    const rawPassword = 'Nathiya@123';
+    const username = 'Yogeshwaran';
+    
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(rawPassword, salt);
+      await User.findByIdAndUpdate(existingUser._id, 
+        { $set: { password: hashedPassword } },
+        { runValidators: false } // Skip password validation during update
+      );
+    } else {
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(rawPassword, salt);
+      await User.create({ username, email, password: hashedPassword });
+    }
+    console.log("Main user credentials are ready!");
+  } catch (err) {
+    console.error('Error seeding user:', err);
+  }
+}
+
+module.exports = app;
